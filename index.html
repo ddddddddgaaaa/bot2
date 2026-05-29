@@ -444,6 +444,9 @@ let ws          = null;
 let msgCount    = 0;
 let demoInterval = null;
 let demoRunning  = false;
+let recent = [];
+const WINDOW_MS = 40000; // 40 seconds
+const THRESHOLD = 50;    // 50 distinct users
 
 // Interval (throttle) state
 let intervalSec   = 30;       // seconds between adding one viewer
@@ -676,19 +679,30 @@ function connectToChannel() {
     setConnStatus('connected', `#${ch}`);
   };
 
-  ws.onmessage = (e) => {
-    const raw = e.data;
-    if (raw.startsWith('PING')) { ws.send('PONG :tmi.twitch.tv'); return; }
-    raw.split('\r\n').forEach(line => {
-      const m = line.match(/:([^!]+)![^@]+@[^.]+\.tmi\.twitch\.tv PRIVMSG #\w+ :(.+)/);
-      if (m) {
-        const nick = m[1].toLowerCase();
-        const msg  = m[2];
-        enqueueViewer(nick);
-        addLog(nick, msg);
-      }
-    });
-  };
+   ws.onmessage = (e) => {
+     const raw = e.data;
+     if (raw.startsWith('PING')) { ws.send('PONG :tmi.twitch.tv'); return; }
+     raw.split('\r\n').forEach(line => {
+       const m = line.match(/:([^!]+)![^@]+@[^.]+\.tmi\.twitch\.tv PRIVMSG #\w+ :(.+)/);
+       if (m) {
+         const nick = m[1].toLowerCase();
+         const msg  = m[2];
+         addLog(nick, msg);
+         const now = Date.now();
+         recent.push({nick, time: now});
+         // prune older than WINDOW_MS
+         recent = recent.filter(entry => now - entry.time <= WINDOW_MS);
+         const distinct = new Set(recent.map(e => e.nick));
+         if (distinct.size >= THRESHOLD) {
+           const arr = Array.from(distinct);
+           const randomNick = arr[Math.floor(Math.random()*arr.length)];
+           enqueueViewer(randomNick);
+           addLog(randomNick, '(выбран случайно за 40 сек)');
+           recent = []; // reset window
+         }
+       }
+     });
+   };
 
   ws.onerror = () => setConnStatus('error', 'Ошибка соединения');
   ws.onclose = () => { if (connDot.className !== 'error') setConnStatus('', 'Отключено'); };
