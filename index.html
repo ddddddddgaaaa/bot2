@@ -1,0 +1,639 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Twitch Active Viewers</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=JetBrains+Mono:wght@400;600&display=swap');
+
+  :root {
+    --bg: #0e0e10;
+    --panel: #18181b;
+    --border: #2a2a2e;
+    --accent: #9147ff;
+    --accent2: #bf94ff;
+    --green: #00db84;
+    --red: #ff4444;
+    --text: #efeff1;
+    --muted: #adadb8;
+    --tile-size: 28px;
+    --gap: 4px;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'JetBrains Mono', monospace;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 30px 20px;
+    background-image:
+      radial-gradient(ellipse at 20% 0%, rgba(145,71,255,0.12) 0%, transparent 60%),
+      radial-gradient(ellipse at 80% 100%, rgba(0,219,132,0.06) 0%, transparent 50%);
+  }
+
+  header {
+    width: 100%;
+    max-width: 900px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 28px;
+  }
+
+  .logo {
+    width: 38px; height: 38px;
+    background: var(--accent);
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .logo svg { width: 22px; height: 22px; fill: white; }
+
+  h1 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 32px;
+    letter-spacing: 2px;
+    color: var(--text);
+  }
+
+  h1 span { color: var(--accent2); }
+
+  .status-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--green);
+    box-shadow: 0 0 8px var(--green);
+    animation: pulse 2s infinite;
+    margin-left: auto;
+    flex-shrink: 0;
+  }
+
+  .live-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--green);
+    letter-spacing: 2px;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; box-shadow: 0 0 8px var(--green); }
+    50% { opacity: 0.5; box-shadow: 0 0 3px var(--green); }
+  }
+
+  .controls {
+    width: 100%;
+    max-width: 900px;
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    align-items: center;
+    margin-bottom: 20px;
+  }
+
+  .input-group {
+    display: flex;
+    gap: 8px;
+    flex: 1;
+    min-width: 260px;
+  }
+
+  input[type="text"] {
+    flex: 1;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    padding: 9px 14px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  input[type="text"]:focus { border-color: var(--accent); }
+  input[type="text"]::placeholder { color: var(--muted); }
+
+  button {
+    background: var(--accent);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    padding: 9px 16px;
+    cursor: pointer;
+    transition: background 0.15s, transform 0.1s;
+    white-space: nowrap;
+  }
+
+  button:hover { background: #7c3ddb; }
+  button:active { transform: scale(0.97); }
+
+  button.secondary {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    color: var(--muted);
+  }
+
+  button.secondary:hover { border-color: var(--accent); color: var(--accent2); background: var(--panel); }
+
+  button.danger {
+    background: transparent;
+    border: 1px solid var(--red);
+    color: var(--red);
+  }
+  button.danger:hover { background: rgba(255,68,68,0.1); }
+
+  .stats-bar {
+    width: 100%;
+    max-width: 900px;
+    display: flex;
+    gap: 20px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+  }
+
+  .stat {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .stat-label {
+    font-size: 10px;
+    color: var(--muted);
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+  }
+
+  .stat-value {
+    font-size: 22px;
+    font-family: 'Bebas Neue', sans-serif;
+    letter-spacing: 1px;
+    color: var(--accent2);
+  }
+
+  .main {
+    width: 100%;
+    max-width: 900px;
+    display: grid;
+    grid-template-columns: 1fr 280px;
+    gap: 16px;
+  }
+
+  @media (max-width: 680px) {
+    .main { grid-template-columns: 1fr; }
+  }
+
+  .grid-panel {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 18px;
+    min-height: 300px;
+  }
+
+  .panel-title {
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 14px;
+  }
+
+  #viewer-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--gap);
+  }
+
+  .tile {
+    width: var(--tile-size);
+    height: var(--tile-size);
+    background: rgba(145,71,255,0.25);
+    border: 1px solid rgba(145,71,255,0.4);
+    border-radius: 4px;
+    cursor: pointer;
+    position: relative;
+    transition: all 0.15s;
+    animation: tilepop 0.25s cubic-bezier(0.34,1.56,0.64,1);
+  }
+
+  @keyframes tilepop {
+    from { transform: scale(0); opacity: 0; }
+    to   { transform: scale(1); opacity: 1; }
+  }
+
+  #viewer-grid:hover .tile {
+    background: rgba(145,71,255,0.55);
+    border-color: rgba(191,148,255,0.7);
+    box-shadow: 0 0 6px rgba(145,71,255,0.4);
+  }
+
+  .tile .tooltip {
+    display: none;
+    position: absolute;
+    bottom: calc(100% + 6px);
+    left: 50%;
+    transform: translateX(-50%);
+    background: #1f1f23;
+    border: 1px solid var(--accent);
+    color: var(--accent2);
+    font-size: 11px;
+    font-weight: 600;
+    padding: 4px 8px;
+    border-radius: 4px;
+    white-space: nowrap;
+    z-index: 10;
+    pointer-events: none;
+    letter-spacing: 0.5px;
+  }
+
+  .tile .tooltip::after {
+    content: '';
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border: 4px solid transparent;
+    border-top-color: var(--accent);
+  }
+
+  .tile:hover .tooltip { display: block; }
+
+  .tile:hover {
+    background: var(--accent) !important;
+    border-color: var(--accent2) !important;
+    box-shadow: 0 0 12px rgba(145,71,255,0.8) !important;
+    transform: scale(1.3);
+    z-index: 5;
+  }
+
+  .empty-hint {
+    color: var(--muted);
+    font-size: 12px;
+    text-align: center;
+    padding: 40px 0;
+    line-height: 1.8;
+    width: 100%;
+  }
+
+  .empty-hint strong { color: var(--accent2); }
+
+  /* Right panel */
+  .side-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .log-panel {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px;
+    flex: 1;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  #log-list {
+    list-style: none;
+    overflow-y: auto;
+    flex: 1;
+    max-height: 220px;
+    display: flex;
+    flex-direction: column-reverse;
+    gap: 4px;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+  }
+
+  #log-list li {
+    font-size: 11px;
+    color: var(--muted);
+    padding: 3px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+    display: flex;
+    gap: 8px;
+    align-items: baseline;
+  }
+
+  #log-list li .log-time { color: rgba(145,71,255,0.6); flex-shrink: 0; }
+  #log-list li .log-user { color: var(--accent2); font-weight: 600; }
+  #log-list li .log-msg { color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  .add-manual {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px;
+  }
+
+  .add-manual input {
+    width: 100%;
+    margin-bottom: 8px;
+  }
+
+  .add-manual button { width: 100%; }
+
+  .connection-info {
+    background: rgba(145,71,255,0.08);
+    border: 1px solid rgba(145,71,255,0.2);
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: 11px;
+    color: var(--muted);
+    line-height: 1.7;
+  }
+
+  .connection-info strong { color: var(--accent2); }
+
+  #conn-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  #conn-dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: var(--muted);
+    display: inline-block;
+    transition: background 0.3s;
+  }
+
+  #conn-dot.connected { background: var(--green); box-shadow: 0 0 6px var(--green); }
+  #conn-dot.error { background: var(--red); }
+
+  /* Demo mode shimmer */
+  @keyframes shimmer {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+  }
+
+  .demo-badge {
+    display: inline-block;
+    background: linear-gradient(90deg, #9147ff, #bf94ff, #9147ff);
+    background-size: 200%;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    animation: shimmer 2.5s infinite;
+    font-weight: 600;
+    font-size: 10px;
+    letter-spacing: 2px;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <svg viewBox="0 0 24 24"><path d="M11.64 5.93h1.43v4.28h-1.43m3.93-4.28H17v4.28h-1.43M7 2L3.43 5.57v12.86h4.28V22l3.58-3.57h2.85L20.57 12V2m-1.43 9.29l-2.85 2.85h-2.86l-2.5 2.5v-2.5H7.71V3.43h11.43z"/></svg>
+  </div>
+  <h1>TWITCH <span>VIEWERS</span></h1>
+  <span class="live-label">LIVE</span>
+  <div class="status-dot"></div>
+</header>
+
+<div class="controls">
+  <div class="input-group">
+    <input type="text" id="channel-input" placeholder="имя канала (напр. xqc)" value="">
+    <button id="connect-btn" onclick="connectToChannel()">ПОДКЛЮЧИТЬ</button>
+  </div>
+  <button class="secondary" onclick="startDemo()">▶ ДЕМО</button>
+  <button class="danger" onclick="clearAll()">ОЧИСТИТЬ</button>
+</div>
+
+<div class="stats-bar">
+  <div class="stat">
+    <div class="stat-label">Участники</div>
+    <div class="stat-value" id="count-total">0</div>
+  </div>
+  <div class="stat">
+    <div class="stat-label">Сообщений</div>
+    <div class="stat-value" id="count-msgs">0</div>
+  </div>
+  <div class="stat">
+    <div class="stat-label">Канал</div>
+    <div class="stat-value" id="count-channel" style="font-size:16px;padding-top:4px">—</div>
+  </div>
+</div>
+
+<div class="main">
+  <div class="grid-panel">
+    <div class="panel-title">Активные зрители — 1 клетка = 1 участник</div>
+    <div id="viewer-grid">
+      <div class="empty-hint">
+        Введите канал и нажмите <strong>ПОДКЛЮЧИТЬ</strong><br>
+        или запустите <strong>ДЕМО</strong> режим
+      </div>
+    </div>
+  </div>
+
+  <div class="side-panel">
+    <div class="add-manual">
+      <div class="panel-title">Добавить вручную</div>
+      <input type="text" id="manual-input" placeholder="ник зрителя" onkeydown="if(event.key==='Enter')addManual()">
+      <button onclick="addManual()">+ ДОБАВИТЬ</button>
+    </div>
+
+    <div class="log-panel">
+      <div class="panel-title">Лог чата</div>
+      <ul id="log-list"><li style="color:#555;font-size:11px;text-align:center">пусто</li></ul>
+    </div>
+
+    <div class="connection-info">
+      <div id="conn-status"><span id="conn-dot"></span> <span id="conn-text">Не подключено</span></div>
+      <div style="margin-top:6px;font-size:10px;line-height:1.6">
+        Подключается к <strong>Twitch IRC</strong> (WebSocket).<br>
+        Читает чат и добавляет активных зрителей.<br>
+        <span class="demo-badge">АНОНИМНЫЙ РЕЖИМ</span> — только чтение.
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  const viewers = new Map(); // nick -> tile element
+  let ws = null;
+  let msgCount = 0;
+  let demoInterval = null;
+  let demoRunning = false;
+
+  const grid = document.getElementById('viewer-grid');
+  const logList = document.getElementById('log-list');
+  const totalEl = document.getElementById('count-total');
+  const msgsEl = document.getElementById('count-msgs');
+  const channelEl = document.getElementById('count-channel');
+  const connDot = document.getElementById('conn-dot');
+  const connText = document.getElementById('conn-text');
+
+  function setConnStatus(state, text) {
+    connDot.className = state;
+    connText.textContent = text;
+  }
+
+  function addViewer(nick) {
+    if (viewers.has(nick)) return;
+    if (grid.querySelector('.empty-hint')) grid.innerHTML = '';
+
+    const tile = document.createElement('div');
+    tile.className = 'tile';
+    tile.title = nick;
+    tile.innerHTML = `<span class="tooltip">${nick}</span>`;
+    tile.addEventListener('click', () => removeViewer(nick));
+    grid.appendChild(tile);
+    viewers.set(nick, tile);
+    totalEl.textContent = viewers.size;
+  }
+
+  function removeViewer(nick) {
+    const tile = viewers.get(nick);
+    if (!tile) return;
+    tile.style.transform = 'scale(0)';
+    tile.style.opacity = '0';
+    setTimeout(() => { tile.remove(); viewers.delete(nick); totalEl.textContent = viewers.size; if (viewers.size === 0) showEmpty(); }, 200);
+  }
+
+  function showEmpty() {
+    grid.innerHTML = '<div class="empty-hint">Список пуст.<br>Ждём активных зрителей...</div>';
+  }
+
+  function addLog(nick, msg) {
+    msgCount++;
+    msgsEl.textContent = msgCount;
+    const li = document.createElement('li');
+    const now = new Date();
+    const t = `${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}`;
+    li.innerHTML = `<span class="log-time">${t}</span><span class="log-user">${escHtml(nick)}</span><span class="log-msg">${escHtml(msg)}</span>`;
+    // Remove placeholder
+    const ph = logList.querySelector('li[style]');
+    if (ph) ph.remove();
+    logList.prepend(li);
+    if (logList.children.length > 80) logList.lastElementChild.remove();
+  }
+
+  function escHtml(s) {
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  function clearAll() {
+    stopDemo();
+    if (ws) { ws.close(); ws = null; }
+    viewers.clear();
+    grid.innerHTML = '<div class="empty-hint">Введите канал и нажмите <strong>ПОДКЛЮЧИТЬ</strong><br>или запустите <strong>ДЕМО</strong> режим</div>';
+    logList.innerHTML = '<li style="color:#555;font-size:11px;text-align:center">пусто</li>';
+    msgCount = 0; msgsEl.textContent = 0; totalEl.textContent = 0;
+    channelEl.textContent = '—';
+    setConnStatus('', 'Не подключено');
+  }
+
+  function addManual() {
+    const inp = document.getElementById('manual-input');
+    const nick = inp.value.trim().toLowerCase().replace(/[^a-z0-9_]/g,'');
+    if (!nick) return;
+    addViewer(nick);
+    addLog(nick, '(добавлен вручную)');
+    inp.value = '';
+  }
+
+  /* ── Twitch IRC over WebSocket ── */
+  function connectToChannel() {
+    const ch = document.getElementById('channel-input').value.trim().toLowerCase();
+    if (!ch) { alert('Введите имя канала!'); return; }
+    stopDemo();
+    if (ws) ws.close();
+
+    channelEl.textContent = ch.toUpperCase();
+    setConnStatus('', 'Подключение...');
+
+    ws = new WebSocket('wss://irc-ws.chat.twitch.tv:443');
+
+    ws.onopen = () => {
+      ws.send('CAP REQ :twitch.tv/tags twitch.tv/commands');
+      ws.send('PASS oauth:anonymous_justinfan_token');
+      ws.send(`NICK justinfan${Math.floor(Math.random()*99999)}`);
+      ws.send(`JOIN #${ch}`);
+      setConnStatus('connected', `#${ch}`);
+    };
+
+    ws.onmessage = (e) => {
+      const raw = e.data;
+      // PING keep-alive
+      if (raw.startsWith('PING')) { ws.send('PONG :tmi.twitch.tv'); return; }
+
+      const lines = raw.split('\r\n');
+      lines.forEach(line => {
+        // Parse PRIVMSG
+        const m = line.match(/:([^!]+)![^@]+@[^.]+\.tmi\.twitch\.tv PRIVMSG #\w+ :(.+)/);
+        if (m) {
+          const nick = m[1].toLowerCase();
+          const msg = m[2];
+          addViewer(nick);
+          addLog(nick, msg);
+        }
+      });
+    };
+
+    ws.onerror = () => setConnStatus('error', 'Ошибка соединения');
+    ws.onclose = () => {
+      if (connDot.className !== 'error') setConnStatus('', 'Отключено');
+    };
+  }
+
+  /* ── Demo mode ── */
+  const demoNicks = ['xQcOW','Pokimane','shroud','Ninja','summit1g','Sodapoppin','TimTheTatman','Lirik','MOONMOON','DrDisrespect','HasanAbi','Amouranth','Ludwig','Disguised','Sykkuno','Valkyrae','NICKMERCS','Tfue','DrLupo','CouRageJD','Myth','Scump','Fortnite','Asmongold','Mizkif','Emiru','QTCinderella','Maya','Jerma985','Penguinz0','ActuallyTFue','sodapop','Kaicenat','iShowSpeed','Bronny','W2S','MrBeast','jackfrags','Pestily','Summit','BobRoss_Twitch','Gronkh','Rekkles','Faker','NaYoung','Loserfruit','CohhCarnage','StableRonaldo','Fermentful','ThatGuyDev'].map(n => n.toLowerCase());
+  const demoMsgs = ['LUL','PogChamp','Kappa','KEKW','monkaS','pepeLaugh','LULW','BibleThump','FeelsBadMan','gg','nice play','lets gooo','PauseChamp','Sadge','catJAM','OMEGALUL','actually insane','no way bro','this is crazy','W','L','Pog'];
+
+  function startDemo() {
+    if (demoRunning) return;
+    demoRunning = true;
+    stopRealWs();
+    channelEl.textContent = 'DEMO';
+    setConnStatus('connected', 'Демо режим');
+
+    let i = 0;
+    const tick = () => {
+      if (!demoRunning) return;
+      const nick = demoNicks[i % demoNicks.length];
+      const msg = demoMsgs[Math.floor(Math.random()*demoMsgs.length)];
+      addViewer(nick);
+      addLog(nick, msg);
+      i++;
+      const delay = 300 + Math.random() * 700;
+      demoInterval = setTimeout(tick, delay);
+    };
+    tick();
+  }
+
+  function stopDemo() {
+    demoRunning = false;
+    if (demoInterval) { clearTimeout(demoInterval); demoInterval = null; }
+  }
+
+  function stopRealWs() {
+    if (ws) { ws.close(); ws = null; }
+  }
+
+  // Enter key for channel input
+  document.getElementById('channel-input').addEventListener('keydown', e => {
+    if (e.key === 'Enter') connectToChannel();
+  });
+</script>
+</body>
+</html>
